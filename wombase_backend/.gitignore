@@ -1,0 +1,6 @@
+.idea/
+venv/
+server/static/
+**/__pycache__/
+.env
+.DS_Store
