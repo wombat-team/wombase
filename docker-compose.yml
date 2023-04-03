@@ -1,0 +1,29 @@
+version: '3'
+services:
+  backend:
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    build: ./wombase_backend/
+    container_name: wombase-backend
+    ports:
+      - "8003:8000"
+    volumes:
+      - ./wombase_backend/server:/opt/server
+    depends_on:
+      - db
+
+  db:
+    image: postgres:14
+    container_name: wombase-db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
