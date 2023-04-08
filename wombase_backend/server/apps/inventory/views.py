@@ -2,25 +2,23 @@ from rest_framework import generics, pagination
 from .models import Tool, ToolCategory
 from .serializers import ToolSerializer, ToolCategorySerializer
 
+query_params = {
+    'cat': 'category',
+    'name': 'name',
+    'own': 'owner'
+}
+
 
 class ToolListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = ToolSerializer
 
     def get_queryset(self):
         queryset = Tool.objects.all()
-
-        if (category := self.request.query_params.get("cat")) is not None:
-            queryset = queryset.filter(category=category)
-
-        if (name := self.request.query_params.get("name")) is not None:
-            queryset = queryset.filter(name=name)
-
-        if (identifier := self.request.query_params.get("id")) is not None:
-            queryset = queryset.filter(identifier=identifier)
-
-        if (owner := self.request.query_params.get("own")) is not None:
-            queryset = queryset.filter(owner=owner)
-
+        for query_param, param in query_params.items():
+            if (value := self.request.query_params.get(*{query_param})) is not None:
+                queryset = queryset.filter(
+                     **{param: value} if param != "owner" else {"owner": f"+{value.strip()}"}
+                )
         return queryset
 
 
@@ -37,4 +35,3 @@ class ToolCategoryListCreateAPIView(generics.ListCreateAPIView):
 class ToolCategoryRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ToolCategory.objects.all()
     serializer_class = ToolCategorySerializer
-
