@@ -1,11 +1,15 @@
 from django.db import models
 
-from server.apps.staff.models import Employee
+from ..staff.models import Employee
 
 
 class ToolCategory(models.Model):
     name = models.CharField(max_length=20, unique=True)
     description = models.TextField()
+
+    def __str__(self):
+        return self.name
+
 
 
 class Tool(models.Model):
@@ -14,3 +18,6 @@ class Tool(models.Model):
     description = models.TextField()
     category = models.ForeignKey(ToolCategory, on_delete=models.CASCADE)
     owner = models.ForeignKey(Employee, on_delete=models.PROTECT)
+
+    def __str__(self):
+        return self.name
