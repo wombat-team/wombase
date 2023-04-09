@@ -4,10 +4,6 @@ from .models import Employee
 from .serializers import EmployeeSerializer
 
 # Create your views here.
-class EmployeeListAPIView(generics.ListAPIView):
-    queryset = Employee.objects.all()
-    serializer_class = EmployeeSerializer
-
 class EmployeeListCreateAPIView(generics.ListCreateAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
