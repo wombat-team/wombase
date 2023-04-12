@@ -23,11 +23,13 @@ class EmployeeRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView
         last_name = request.data.get('last_name', user.last_name)
         email = request.data.get('email', user.email)
         new_password = request.data.get('new_password')
+        role = EmployeeRole.objects.get(user.role)
 
         user.phone_number = phone_number
         user.first_name = first_name
         user.last_name = last_name
         user.email = email
+        user.role = role
 
         if new_password:
             user.set_password(new_password)
