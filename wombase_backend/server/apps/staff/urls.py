@@ -1,9 +1,8 @@
-from django.urls import path, include
+from django.urls import path
 
-from .views import EmployeeListAPIView, EmployeeRetrieveUpdateDestroyAPIView, EmployeeListCreateAPIView
+from .views import EmployeeRetrieveUpdateDestroyAPIView, EmployeeListCreateAPIView
 
 urlpatterns = [
-    path('list', EmployeeListAPIView.as_view()),
     path('<int:pk>', EmployeeRetrieveUpdateDestroyAPIView.as_view()),
-    path('new', EmployeeListCreateAPIView.as_view()),
+    path('', EmployeeListCreateAPIView.as_view()),
 ]
