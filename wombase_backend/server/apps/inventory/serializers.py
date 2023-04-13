@@ -3,12 +3,23 @@ from .models import Tool, ToolCategory
 
 
 class ToolSerializer(serializers.ModelSerializer):
+    category = serializers.SlugRelatedField(slug_field="name", queryset=ToolCategory.objects.all())
+
     class Meta:
         model = Tool
-        fields = '__all__'
+        fields = (
+            "identifier",
+            "name",
+            "description",
+            "category",
+            "owner"
+        )
 
 
 class ToolCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ToolCategory
-        fields = '__all__'
+        fields = (
+            "name",
+            "description"
+        )
