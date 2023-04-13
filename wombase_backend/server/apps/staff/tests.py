@@ -1,33 +1,17 @@
-from django.test import TestCase
 from rest_framework.test import APIClient
 
-from server.apps.staff.models import Employee, EmployeeRole
-from server.apps.staff.serializers import EmployeeSerializer
+from .models import Employee, EmployeeRole
+from .serializers import EmployeeDetailsSerializer, EmployeeListCreateSerializer
+from ..core.tests import (
+    AbstractTestMixin,
+    AbstractListCreateViewTest,
+    AbstractRetrieveUpdateDestroyViewTest,
+)
 
 
-def to_dict(
-    employee: Employee | dict,
-    fields: tuple = EmployeeSerializer.Meta.fields,
-    exluded_fields: tuple = ("password",),
-):
-    employee_dict = {}
-    necessary_fields = set(fields) - set(exluded_fields)
-    foreign_keys = tuple(
-        filter(lambda x: Employee._meta.get_field(x).is_relation, necessary_fields)
-    )
-    for field in necessary_fields:
-        field_value = (
-            employee.get(field)
-            if isinstance(employee, dict)
-            else getattr(employee, field)
-        )
-        employee_dict.update(
-            {field: field_value if field not in foreign_keys else str(field_value)}
-        )
-    return employee_dict
+class EmployeeCreationTestCase(AbstractTestMixin):
+    model = Employee
 
-
-class EmployeeTestCase(TestCase):
     def setUp(self):
         EmployeeRole.objects.get_or_create(
             name="worker",
@@ -55,7 +39,7 @@ class EmployeeTestCase(TestCase):
             email=email,
         )
         pre_creation_fields = locals()
-        for field, field_value in to_dict(
+        for field, field_value in self.to_narrowed_dict(
             employee, fields=("phone_number", "first_name", "last_name", "email")
         ).items():
             self.assertEqual(
@@ -93,7 +77,7 @@ class EmployeeTestCase(TestCase):
                 )
         self.assertNotEqual(password, admin.password, "Password must be encrypted")
 
-    def test_user_with_no_email_creation(self):
+    def test_employee_with_no_email_creation(self):
         """Users may register with no email. Test is successful if email is blank"""
         employee = Employee.objects.create_user(
             phone_number="+380990987654",
@@ -107,7 +91,7 @@ class EmployeeTestCase(TestCase):
         )
 
 
-class EmployeeTestMixin(TestCase):
+class EmployeeTestMixin(AbstractTestMixin):
     client_class = APIClient
     url = "/employee/"
 
@@ -126,139 +110,62 @@ class EmployeeTestMixin(TestCase):
             )
 
 
-class TestEmployeeListCreateView(EmployeeTestMixin):
-    def test_list_employees(self):
-        """Response list must contain all objects that were created and return 200 status code"""
-        response = self.client.get(self.url)
+class TestEmployeeListCreateView(EmployeeTestMixin, AbstractListCreateViewTest):
+    serializer = EmployeeListCreateSerializer
+    creation_data = {
+        "phone_number": "+380970987654",
+        "first_name": "Helen",
+        "last_name": "Crain",
+        "email": "helen.crain@example.com",
+        "role": "manager",
+        "password": "somePassword123#(#(",
+    }
 
-        self.assertEqual(
-            status_code := response.status_code,
-            200,
-            f"Status code should be 200, got {status_code}",
-        )
+    def test_list(self):
+        return self.list_test_method()
 
-        exptected_objects = [to_dict(employee) for employee in Employee.objects.all()]
-        actual_objects = [dict(employee) for employee in response.data]
-        self.assertListEqual(
-            exptected_objects,
-            actual_objects,
-            "Objects of present db dataset must be equal to objects returned by get request",
-        )
-
-    def test_create_employee(self):
-        """Post request must create new object in DB when data is valid, return 201 status code and created object"""
-        data = {
-            "phone_number": "+380970987654",
-            "first_name": "Helen",
-            "last_name": "Crain",
-            "email": "helen.crain@example.com",
-            "role": "manager",
-            "password": "somePassword123#(#(",
-        }
-        response = self.client.post(self.url, data=data)
-        self.assertEquals(
-            201,
-            response_code := response.status_code,
-            f"Expected status code 201, got {response_code}",
-        )
-        response_data = response.data
-        for field in data:
-            if field == "password":
-                continue
-            self.assertEquals(
-                exptected := data.get(field),
-                actual := response_data.get(field),
-                f"Field {field}: expected {exptected}, actual {actual}",
-            )
-        self.assertEquals(
-            3, Employee.objects.count(), "Newly created object is not in the DB"
-        )
+    def test_create(self):
+        return self.create_test_method()
 
 
-class TestEmployeeRetrieveUpdateDestroyAPIVIew(EmployeeTestMixin):
-    @property
-    def available_object_id(self) -> int:
-        return Employee.objects.first().id
-
-    @property
-    def url(self) -> str:
-        return super(self.__class__, self).url + str(self.available_object_id)
+class TestEmployeeRetrieveUpdateDestroyAPIVIew(
+    EmployeeTestMixin, AbstractRetrieveUpdateDestroyViewTest
+):
+    serializer = EmployeeDetailsSerializer
+    update_data = {
+        "first_name": "Olena",
+        "last_name": "Kulish",
+        "phone_number": "+380971234567",
+        "role": "manager",
+        "password": "hashMeIAmInsecure",
+    }
 
     def test_request_to_unexisting_id(self):
-        response = self.client.get(self.url + "1000")
-        self.assertEquals(
-            404,
-            status_code := response.status_code,
-            f"Expected status code 404, got {status_code}",
-        )
+        self.request_by_unexisting_id()
 
     def test_retrieve_employee(self):
-        """Get request must return employee from db and status code 200"""
-        response = self.client.get(self.url)
-        expected_employee = to_dict(Employee.objects.get(id=self.available_object_id))
-        actual_employee = to_dict(response.data)
-        self.assertEqual(
-            200,
-            actual_status_code := response.status_code,
-            f"Reponse status code must be 200, got {actual_status_code}",
-        )
-        self.assertEqual(
-            expected_employee,
-            actual_employee,
-            f"Expected {expected_employee}, got {actual_employee}",
-        )
+        self.retrieve_test_method()
 
     def test_update_employee(self):
-        """Put request must return changed employee data and changed password must be hashed. Status code 200"""
-        employee_before_put = Employee.objects.get(id=self.available_object_id)
-        data = {
-            "first_name": "Olena",
-            "last_name": "Kulish",
-            "phone_number": "+380971234567",
-            "role": "manager",
-            "password": "hashMeIAmInsecure",
-        }
-        response = self.client.put(self.url, data=data)
-        employee_in_db = Employee.objects.get(id=self.available_object_id)
-        self.assertEquals(
-            expected := to_dict(data, exluded_fields=("password", "email")),
-            actual := to_dict(
-                employee_in_db,
-                exluded_fields=(
-                    "password",
-                    "email",
-                ),
-            ),
-            f"Employee in db is not the same as request by put. Expected {expected}, got {actual}",
-        )
-        self.assertEquals(
-            "test1@example.com",
-            employee_in_db.email,
-            "Email must not be changed if not included in request",
-        )
-        self.assertEquals(
-            to_dict(response.data, exluded_fields=("password",)),
-            actual := to_dict(employee_in_db, exluded_fields=("password",)),
-            f"Response data must match the data in db. Expected {expected}, got {actual}",
-        )
-        self.assertNotEquals(
-            data.get("password"), employee_in_db.password, "Password must be hashed."
-        )
-        self.assertEquals(
-            200,
-            actual_status_code := response.status_code,
-            f"Expecrted status code 200, got {actual_status_code}",
-        )
+        self.update_test_method()
 
     def test_delete_employee(self):
-        """Employee must dissapear from db after deletion and status code must be 204"""
-        response = self.client.delete(self.url)
-        self.assertIsNone(
-            Employee.objects.filter(id=self.available_object_id).first(),
-            "Employee is still present in the db. It must be deleted",
-        )
+        self.delete_test_method()
+
+    def test_no_change_to_blank_email(self):
+        available_id = self.available_object_pk
+        pre_change_email = self.model.objects.get(id=available_id).email
+        self.client.put(self.get_url(), data=self.update_data)
+        after_change_email = self.model.objects.get(id=available_id).email
         self.assertEquals(
-            204,
-            actual_status_code := response.status_code,
-            f"Expected status code 204, got {actual_status_code}",
+            pre_change_email,
+            after_change_email,
+            "Email must not be changed if not included in request"
+        )
+
+    def test_password_is_hashed_after_update(self):
+        self.client.put(self.get_url(), data=self.update_data)
+        employee_in_db = self.model.objects.get(id=self.available_object_pk)
+        self.assertNotEquals(
+            self.update_data.get("password"), employee_in_db.password, "Password must be hashed."
         )
