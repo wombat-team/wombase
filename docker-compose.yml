@@ -7,6 +7,7 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
+      - PYTHONUNBUFFERED=1
     build: ./wombase_backend/
     container_name: wombase-backend
     ports:
