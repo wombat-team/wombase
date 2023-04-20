@@ -1,17 +1,17 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from server.apps.staff.models import Employee, EmployeeRole
-from server.apps.staff.serializers import EmployeeSerializer
+from ..core.models import Employee, EmployeeRole
+from .serializers import EmployeeDetailsSerializer
 
 
 def to_dict(
-    employee: Employee | dict,
-    fields: tuple = EmployeeSerializer.Meta.fields,
-    exluded_fields: tuple = ("password",),
+        employee: Employee | dict,
+        fields: tuple = EmployeeDetailsSerializer.Meta.fields,
+        excluded_fields: tuple = ("password",),
 ):
     employee_dict = {}
-    necessary_fields = set(fields) - set(exluded_fields)
+    necessary_fields = set(fields) - set(excluded_fields)
     foreign_keys = tuple(
         filter(lambda x: Employee._meta.get_field(x).is_relation, necessary_fields)
     )
@@ -56,7 +56,7 @@ class EmployeeTestCase(TestCase):
         )
         pre_creation_fields = locals()
         for field, field_value in to_dict(
-            employee, fields=("phone_number", "first_name", "last_name", "email")
+                employee, fields=("phone_number", "first_name", "last_name", "email")
         ).items():
             self.assertEqual(
                 pre_creation_fields.get(field),
@@ -137,10 +137,10 @@ class TestEmployeeListCreateView(EmployeeTestMixin):
             f"Status code should be 200, got {status_code}",
         )
 
-        exptected_objects = [to_dict(employee) for employee in Employee.objects.all()]
+        expected_objects = [to_dict(employee) for employee in Employee.objects.all()]
         actual_objects = [dict(employee) for employee in response.data]
         self.assertListEqual(
-            exptected_objects,
+            expected_objects,
             actual_objects,
             "Objects of present db dataset must be equal to objects returned by get request",
         )
@@ -195,8 +195,9 @@ class TestEmployeeRetrieveUpdateDestroyAPIVIew(EmployeeTestMixin):
     def test_retrieve_employee(self):
         """Get request must return employee from db and status code 200"""
         response = self.client.get(self.url)
-        expected_employee = to_dict(Employee.objects.get(id=self.available_object_id))
-        actual_employee = to_dict(response.data)
+        expected_employee = to_dict(Employee.objects.get(id=self.available_object_id),
+                                    fields=EmployeeDetailsSerializer.Meta.fields)
+        actual_employee = to_dict(response.data, fields=EmployeeDetailsSerializer.Meta.fields)
         self.assertEqual(
             200,
             actual_status_code := response.status_code,
@@ -221,13 +222,13 @@ class TestEmployeeRetrieveUpdateDestroyAPIVIew(EmployeeTestMixin):
         response = self.client.put(self.url, data=data)
         employee_in_db = Employee.objects.get(id=self.available_object_id)
         self.assertEquals(
-            expected := to_dict(data, exluded_fields=("password", "email")),
+            expected := to_dict(data, excluded_fields=("password", "email"), fields=EmployeeDetailsSerializer.Meta.fields),
             actual := to_dict(
                 employee_in_db,
-                exluded_fields=(
+                excluded_fields=(
                     "password",
                     "email",
-                ),
+                ), fields=EmployeeDetailsSerializer.Meta.fields
             ),
             f"Employee in db is not the same as request by put. Expected {expected}, got {actual}",
         )
@@ -237,8 +238,8 @@ class TestEmployeeRetrieveUpdateDestroyAPIVIew(EmployeeTestMixin):
             "Email must not be changed if not included in request",
         )
         self.assertEquals(
-            to_dict(response.data, exluded_fields=("password",)),
-            actual := to_dict(employee_in_db, exluded_fields=("password",)),
+            to_dict(response.data, excluded_fields=("password",), fields=EmployeeDetailsSerializer.Meta.fields),
+            actual := to_dict(employee_in_db, excluded_fields=("password",), fields=EmployeeDetailsSerializer.Meta.fields),
             f"Response data must match the data in db. Expected {expected}, got {actual}",
         )
         self.assertNotEquals(

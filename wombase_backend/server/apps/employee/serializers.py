@@ -1,10 +1,10 @@
 from rest_framework import serializers
 
-from .models import Employee, EmployeeRole
+from ..core.models import Employee, EmployeeRole
 
 
 class EmployeeDetailsSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(max_length=32, write_only=True)
+    password = serializers.CharField(max_length=32, write_only=True, required=False)
 
     class Meta:
         model = Employee
