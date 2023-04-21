@@ -12,7 +12,8 @@ class ToolSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "category",
-            "owner"
+            "owner",
+            "currently_at"
         )
 
 
