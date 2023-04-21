@@ -1,6 +1,5 @@
-from rest_framework.test import APIClient
-
-from ..core.models import Employee, EmployeeRole
+from .models import EmployeeRole
+from ..core.models import Employee
 from .serializers import EmployeeDetailsSerializer, EmployeeListCreateSerializer
 from ..core.tests import (
     AbstractTestMixin,
@@ -9,15 +8,15 @@ from ..core.tests import (
 )
 
 
-class EmployeeCreationTestCase(AbstractTestMixin):
+class EmployeeCreationTest(AbstractTestMixin):
     model = Employee
 
     def setUp(self):
         EmployeeRole.objects.get_or_create(
-            name="worker",
+            name="Worker",
         )
         EmployeeRole.objects.get_or_create(
-            name="manager",
+            name="Manager",
         )
 
     def test_employee_creation(self):
@@ -28,7 +27,7 @@ class EmployeeCreationTestCase(AbstractTestMixin):
         password = "example_test_password"
         first_name = "John"
         last_name = "Smith"
-        role_name = "worker"
+        role_name = "Worker"
         email = f"wolf@exmaple.com"
         employee = Employee.objects.create_user(
             phone_number=phone_number,
@@ -82,7 +81,7 @@ class EmployeeCreationTestCase(AbstractTestMixin):
         employee = Employee.objects.create_user(
             phone_number="+380990987654",
             password="test test",
-            role_name="manager",
+            role_name="Manager",
             first_name="Yura",
             last_name="Khoma",
         )
@@ -92,18 +91,17 @@ class EmployeeCreationTestCase(AbstractTestMixin):
 
 
 class EmployeeTestMixin(AbstractTestMixin):
-    client_class = APIClient
     url = "/employee/"
 
     def setUp(self):
         Employee.objects.all().delete()
-        EmployeeRole.objects.get_or_create(name="worker")
-        EmployeeRole.objects.get_or_create(name="manager")
+        EmployeeRole.objects.get_or_create(name="Worker")
+        EmployeeRole.objects.get_or_create(name="Manager")
         for index in range(1, 3):
             Employee.objects.create_user(
                 phone_number=f"+38063{index}234567",
                 password=f"testPass{index}",
-                role_name="worker",
+                role_name="Worker",
                 first_name=f"TestName{index}",
                 last_name=f"TestSurname{index}",
                 email=f"test{index}@example.com",
@@ -112,23 +110,23 @@ class EmployeeTestMixin(AbstractTestMixin):
 
 class TestEmployeeListCreateView(EmployeeTestMixin, AbstractListCreateViewTest):
     serializer = EmployeeListCreateSerializer
-    creation_data = {
+    create_data = {
         "phone_number": "+380970987654",
         "first_name": "Helen",
         "last_name": "Crain",
         "email": "helen.crain@example.com",
-        "role": "manager",
+        "role": "Manager",
         "password": "somePassword123#(#(",
     }
 
     def test_list(self):
-        return self.list_test_method()
+        return self.basic_list_functionality_test()
 
     def test_create(self):
-        return self.create_test_method()
+        return self.basic_create_functionality_test()
 
 
-class TestEmployeeRetrieveUpdateDestroyAPIVIew(
+class TestEmployeeRetrieveUpdateDestroyAPIView(
     EmployeeTestMixin, AbstractRetrieveUpdateDestroyViewTest
 ):
     serializer = EmployeeDetailsSerializer
@@ -136,7 +134,7 @@ class TestEmployeeRetrieveUpdateDestroyAPIVIew(
         "first_name": "Olena",
         "last_name": "Kulish",
         "phone_number": "+380971234567",
-        "role": "manager",
+        "role": "Manager",
         "password": "hashMeIAmInsecure",
     }
 
@@ -144,15 +142,15 @@ class TestEmployeeRetrieveUpdateDestroyAPIVIew(
         self.request_by_unexisting_id()
 
     def test_retrieve_employee(self):
-        self.retrieve_test_method()
+        self.basic_retrieve_functionality_test()
 
-    def test_update_employee(self):
-        self.update_test_method()
+    def test_basic_update_employee(self):
+        self.basic_update_functionality_test()
 
     def test_delete_employee(self):
-        self.delete_test_method()
+        self.basic_delete_functionality_test()
 
-    def test_no_change_to_blank_email(self):
+    def test_update_no_change_to_blank_email(self):
         available_id = self.available_object_pk
         pre_change_email = self.model.objects.get(id=available_id).email
         self.client.put(self.get_url(), data=self.update_data)
@@ -163,7 +161,7 @@ class TestEmployeeRetrieveUpdateDestroyAPIVIew(
             "Email must not be changed if not included in request"
         )
 
-    def test_password_is_hashed_after_update(self):
+    def test_update_password_is_hashed(self):
         self.client.put(self.get_url(), data=self.update_data)
         employee_in_db = self.model.objects.get(id=self.available_object_pk)
         self.assertNotEquals(
