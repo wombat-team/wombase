@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from ..core.models import Employee, EmployeeRole
+from ..core.models import Employee
+from .models import EmployeeRole
 
 
 class EmployeeDetailsSerializer(serializers.ModelSerializer):
