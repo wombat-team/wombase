@@ -1,4 +1,4 @@
 from django.contrib import admin
-from server.apps.staff.models import Employee
+from ..core.models import Employee
 
 admin.site.register(Employee)

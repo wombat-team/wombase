@@ -8,10 +8,10 @@ class ToolSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tool
         fields = (
-            "identifier",
             "name",
-            "description",
+            "identifier",
             "category",
+            "description",
             "owner",
             "currently_at"
         )

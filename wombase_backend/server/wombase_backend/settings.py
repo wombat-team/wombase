@@ -20,9 +20,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'server.apps.inventory',
-    'server.apps.staff',
+    'server.apps.tools',
+    'server.apps.employee',
     'server.apps.core',
+    'server.apps.authentication',
 ]
 
 MIDDLEWARE = [
@@ -95,8 +96,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 STATIC_ROOT = './server/static'
 
-AUTH_USER_MODEL = 'staff.Employee'
+AUTH_USER_MODEL = 'core.Employee'
 
 AUTHENTICATION_BACKENDS = [
-    'server.apps.staff.backends.EmployeeBackend'
+    'server.apps.authentication.backends'
 ]

@@ -3,9 +3,9 @@ from server.apps.core.tests import (
     AbstractListCreateViewTest,
     AbstractRetrieveUpdateDestroyViewTest,
 )
-from server.apps.inventory.models import ToolCategory, Tool
-from server.apps.inventory.serializers import ToolCategorySerializer, ToolSerializer
-from server.apps.staff.models import Employee
+from server.apps.tools.models import ToolCategory, Tool
+from server.apps.tools.serializers import ToolCategorySerializer, ToolSerializer
+from server.apps.core.models import Employee
 
 
 class ToolCategoryTestMixin(AbstractTestMixin):
