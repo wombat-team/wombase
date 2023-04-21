@@ -2,7 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 
 from .models import Tool, ToolCategory
-from ..staff.models import Employee
+from ..core.models import Employee
 from .serializers import ToolSerializer, ToolCategorySerializer
 
 

@@ -28,37 +28,30 @@ class AbstractTestMixin(TestCase):
     ):
         if not fields:
             fields = self.serializer.Meta.fields
-
         if not include_blank:
             blank_fields = [
                 field.name for field in self.model._meta.fields if field.blank
             ]
-
         if self.serializer and not isinstance(instance, dict):
             instance = self.serializer(instance).data
-
         if self.serializer:
             write_only_fields = [
                 field_name
                 for field_name, field in self.serializer().get_fields().items()
                 if field.write_only is True
             ]
-
         if not isinstance(instance, dict):
             instance = {field: getattr(instance, field) for field in fields}
-
         excluded_fields = (
             *excluded_fields,
             *(blank_fields if not include_blank else ()),
             *(write_only_fields if self.serializer else ()),
         )
-
         instance = {
             field: value
             for field, value in instance.items()
             if field in fields and field not in excluded_fields
         }
-
         return instance
 
 
@@ -76,10 +69,8 @@ class AbstractListCreateViewTest(AbstractTestMixin):
         query_param_random_value = random.choice(string.ascii_letters + string.digits)
         for parameter in query_parameters:
             response_data = self.client.get(
-                url := f"{self.url}?{parameter}={query_param_random_value}"
+                f"{self.url}?{parameter}={query_param_random_value}"
             ).data
-            print(url, response_data)
-
             expected_data_length = self.model.objects.filter(
                 **{f"{parameter}__icontains": query_param_random_value}
             ).count()

@@ -1,6 +1,6 @@
 from django.db import models
 
-from ..staff.models import Employee
+from ..core.models import Employee
 
 
 class ToolCategory(models.Model):
