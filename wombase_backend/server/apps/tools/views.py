@@ -16,8 +16,10 @@ class ToolListCreateAPIView(generics.ListCreateAPIView):
                     queryset = queryset.filter(name__icontains=param_value)
                 if query_param == 'category':
                     queryset = queryset.filter(category__name__icontains=param_value)
-                if query_param == 'available':
-                    queryset = queryset.filter(currently_at=Tool.DEFAULT_PLACE)
+                if query_param == 'identifier':
+                    queryset = queryset.filter(identifier__icontains=param_value)
+                if query_param == 'at':
+                    queryset = queryset.filter(currently_at__icontains=param_value)
         return queryset
 
 
