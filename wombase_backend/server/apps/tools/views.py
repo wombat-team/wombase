@@ -21,7 +21,7 @@ class ToolListCreateAPIView(generics.ListCreateAPIView):
                 queryset = queryset.filter(category__name__icontains=param_value)
             if query_param == "identifier":
                 queryset = queryset.filter(identifier__icontains=param_value)
-            if query_param == "at":
+            if query_param == "currently_at":
                 queryset = queryset.filter(currently_at__icontains=param_value)
         return queryset
 
@@ -51,16 +51,16 @@ class ToolTransferAPIView(generics.UpdateAPIView):
         if data.get("owner") is not None and data.get("currently_at") is not None:
             return Response(
                 {
-                    "ERROR": "The owner and currently_at fields cannot both have a value. "
-                             "Please provide a value for only one of them."
+                    "message": "The owner and currently_at fields cannot both have a value. "
+                               "Please provide a value for only one of them."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if data.get("owner") is None and data.get("currently_at") is None:
             return Response(
                 {
-                    "ERROR": "Both owner and currently_at fields are empty. "
-                             "Please provide a value for either one of them."
+                    "message": "Both owner and currently_at fields are empty. "
+                               "Please provide a value for either one of them."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
