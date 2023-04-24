@@ -1,6 +1,3 @@
-import random
-import string
-
 from django.db.models import Model
 from django.test import TestCase
 from rest_framework.test import APIClient
@@ -54,46 +51,20 @@ class AbstractTestMixin(TestCase):
         }
         return instance
 
+    def request_code_matches_expected_test(self, response, expected_status_code: int):
+        self.assertEquals(
+            expected_status_code,
+            status_code := response.status_code,
+            f"Status code must be {expected_status_code}, but got {status_code}",
+        )
 
-class AbstractListCreateViewTest(AbstractTestMixin):
-    create_data = {}
 
-    def get_create_data(self):
-        return self.create_data
-
-    def get_valid_query_params(self):
-        return [field.name for field in self.model._meta.fields if not field.is_relation]
-
-    def get_queryset_contains_test(self):
-        query_parameters = self.get_valid_query_params()
-        query_param_random_value = random.choice(string.ascii_letters + string.digits)
-        for parameter in query_parameters:
-            response_data = self.client.get(
-                f"{self.url}?{parameter}={query_param_random_value}"
-            ).data
-            expected_data_length = self.model.objects.filter(
-                **{f"{parameter}__icontains": query_param_random_value}
-            ).count()
-            self.assertEquals(
-                expected_data_length,
-                response_data_length := len(response_data),
-                f"Resulting queryset should be {expected_data_length} objects long. "
-                f"Actual length: {response_data_length}",
-            )
-            for instance in response_data:
-                self.assertTrue(
-                    query_param_random_value.lower()
-                    in (instance_parameter := instance.get(parameter).lower()),
-                    f"Query parameter fail. {query_param_random_value} is not in {instance_parameter}",
-                )
-
+class AbstractListViewTestMixin(AbstractTestMixin):
     def basic_list_functionality_test(self):
         """Response list must contain all objects that were created and return 200 status code"""
         response = self.client.get(self.url)
-        self.assertEqual(
-            200,
-            status_code := response.status_code,
-            f"Status code should be 200, got {status_code}",
+        self.request_code_matches_expected_test(
+            response=response, expected_status_code=200
         )
         exptected_objects = [
             self.to_narrowed_dict(instance) for instance in self.model.objects.all()
@@ -105,15 +76,48 @@ class AbstractListCreateViewTest(AbstractTestMixin):
             "Objects of present db dataset must be equal to objects returned by get request",
         )
 
+    def query_param_test_set(
+        self,
+        query_param: str,
+        exptected_queryset_length: int,
+        failure_message: str = "",
+        param_value: str = None,
+    ):
+        response_data = self.client.get(
+            f"{self.url}?{query_param}" + (f"={param_value}" if param_value else "")
+        ).data
+        self.assertEquals(
+            exptected_queryset_length,
+            element_quantity := len(response_data),
+            failure_message
+            if failure_message
+            else f"{query_param.capitalize()} filtering test failure"
+            + f". Expected queryset length {exptected_queryset_length}, got {element_quantity}",
+        )
+        if not param_value:
+            return
+        for element in response_data:
+            element = dict(element)
+            self.assertIn(
+                param_value.lower(),
+                full_param_value_name := element.get(query_param),
+                f"Expected parameter value {param_value} to be in {full_param_value_name}",
+            )
+
+
+class AbstractCreateViewTestMixin(AbstractTestMixin):
+    create_data = {}
+
+    def get_create_data(self):
+        return self.create_data
+
     def basic_create_functionality_test(self):
         """Post request must create new object in DB when data is valid, return 201 status code and created object"""
         db_size_before_post = self.model.objects.count()
         create_data = self.get_create_data()
         response = self.client.post(self.url, data=create_data)
-        self.assertEquals(
-            201,
-            response_code := response.status_code,
-            f"Expected status code 201, got {response_code}",
+        self.request_code_matches_expected_test(
+            response=response, expected_status_code=201
         )
         response_data = response.data
         for field in create_data:
@@ -131,37 +135,39 @@ class AbstractListCreateViewTest(AbstractTestMixin):
         )
 
 
-class AbstractRetrieveUpdateDestroyViewTest(AbstractTestMixin):
-    update_data = {}
+class AbstractListCreateViewTest(
+    AbstractListViewTestMixin, AbstractCreateViewTestMixin
+):
+    ...
 
+
+class AbstractDetailsMixin(AbstractTestMixin):
     @property
     def available_object_pk(self) -> int:
         return self.model.objects.last().pk
 
-    def get_update_data(self):
-        return self.update_data
-
     def get_url(self) -> str:
         return super(self.__class__, self).url + str(self.available_object_pk)
 
+    def get_available_object(self):
+        return self.model.objects.get(pk=self.available_object_pk)
+
     def request_by_unexisting_id(self):
         response = self.client.get(self.get_url() + "1")
-        self.assertEquals(
-            404,
-            status_code := response.status_code,
-            f"Expected status code 404, got {status_code}",
+        self.request_code_matches_expected_test(
+            response=response, expected_status_code=404
         )
 
+
+class AbstractRetrieveViewMixin(AbstractDetailsMixin):
     def basic_retrieve_functionality_test(self):
         """Get request must return object from db and status code 200"""
         response = self.client.get(self.get_url())
-        self.assertEqual(
-            200,
-            actual_status_code := response.status_code,
-            f"Reponse status code must be 200, got {actual_status_code}",
+        self.request_code_matches_expected_test(
+            response=response, expected_status_code=200
         )
         expected_object = self.to_narrowed_dict(
-            self.model.objects.get(pk=self.available_object_pk)
+            self.get_available_object()
         )
         actual_object = self.to_narrowed_dict(response.data)
         self.assertEqual(
@@ -170,19 +176,35 @@ class AbstractRetrieveUpdateDestroyViewTest(AbstractTestMixin):
             f"Expected {expected_object}, got {actual_object}",
         )
 
+
+class AbstractUpdateViewMixin(AbstractDetailsMixin):
+    update_data = {}
+
+    def get_update_excluded_fields(self):
+        return ()
+
+    def get_update_data(self):
+        return self.update_data
+
     def basic_update_functionality_test(self):
         """Put request must return changed object data and changed password must be hashed. Status code 200"""
         update_data = self.get_update_data()
         response = self.client.put(self.get_url(), data=update_data)
-        object_in_db = self.model.objects.get(pk=self.available_object_pk)
-        self.assertEquals(
-            200,
-            actual_status_code := response.status_code,
-            f"Expected status code 200, got {actual_status_code}",
+        object_in_db = self.get_available_object()
+        self.request_code_matches_expected_test(
+            response=response, expected_status_code=200
         )
         self.assertEquals(
-            expected := self.to_narrowed_dict(update_data, include_blank=False),
-            actual := self.to_narrowed_dict(object_in_db, include_blank=False),
+            expected := self.to_narrowed_dict(
+                self.get_update_data(),
+                include_blank=False,
+                excluded_fields=self.get_update_excluded_fields(),
+            ),
+            actual := self.to_narrowed_dict(
+                object_in_db,
+                include_blank=False,
+                excluded_fields=self.get_update_excluded_fields(),
+            ),
             f"Object in db is not the same as in put request. Expected {expected}, got {actual}",
         )
         self.assertEquals(
@@ -191,17 +213,25 @@ class AbstractRetrieveUpdateDestroyViewTest(AbstractTestMixin):
             f"Response data must match the data in db. Expected {expected}, got {actual}",
         )
 
+
+class AbstractDestroyViewMixin(AbstractDetailsMixin):
     def basic_delete_functionality_test(self):
         """Object must dissapear from db after deletion and status code must be 204"""
         url = self.get_url()
         deleted_object_pk = self.available_object_pk
         response = self.client.delete(url)
-        self.assertEquals(
-            204,
-            actual_status_code := response.status_code,
-            f"Expected status code 204, got {actual_status_code}",
+        self.request_code_matches_expected_test(
+            response=response, expected_status_code=204
         )
         self.assertIsNone(
             self.model.objects.filter(pk=deleted_object_pk).first(),
             "Object is still present in the db. It must be deleted",
         )
+
+
+class AbstractRetrieveUpdateDestroyViewTest(
+    AbstractRetrieveViewMixin,
+    AbstractUpdateViewMixin,
+    AbstractDestroyViewMixin,
+):
+    ...
