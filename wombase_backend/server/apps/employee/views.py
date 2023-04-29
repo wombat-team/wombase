@@ -1,4 +1,4 @@
-from rest_framework import generics, status, viewsets, permissions
+from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
 
 from ..core.models import Employee, EmployeeRole
