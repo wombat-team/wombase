@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     'server.apps.employee',
     'server.apps.core',
     'server.apps.authentication',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -99,5 +100,14 @@ STATIC_ROOT = './server/static'
 AUTH_USER_MODEL = 'core.Employee'
 
 AUTHENTICATION_BACKENDS = [
-    'server.apps.authentication.backends'
+    'server.apps.authentication.backends.EmployeeBackend'
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
