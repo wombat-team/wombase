@@ -26,3 +26,4 @@ class EmployeeLoginAPIView(CreateAPIView):
         if user is not None:
             token = Token.objects.get(user=user)
             return Response({'token': token.key})
+        return Response({'detail': 'Invalid phone number or password'}, status=status.HTTP_401_UNAUTHORIZED)
