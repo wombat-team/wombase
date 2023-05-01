@@ -44,10 +44,10 @@ class ToolCategorySerializer(serializers.ModelSerializer):
 
 
 class ToolHistorySerializer(serializers.ModelSerializer):
-    changed_at = serializers.SerializerMethodField('get_changed_at')
-    where_now = serializers.SerializerMethodField('get_where_now')
-    status = serializers.SerializerMethodField('get_status')
-    changed_by = serializers.SerializerMethodField('get_changed_by')
+    changed_at = serializers.SerializerMethodField("get_changed_at")
+    where_now = serializers.SerializerMethodField("get_where_now")
+    status = serializers.SerializerMethodField("get_status")
+    changed_by = serializers.SerializerMethodField("get_changed_by")
 
     class Meta:
         model = Tool.history.model
@@ -75,6 +75,5 @@ class ToolHistorySerializer(serializers.ModelSerializer):
 
     def get_status(self, obj):
         if obj.currently_at == Tool.DEFAULT_PLACE:
-            return 'returned'
-        if obj.currently_at or obj.owner:
-            return 'taken'
+            return "returned"
+        return "taken"
