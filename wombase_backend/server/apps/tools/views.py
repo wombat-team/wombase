@@ -101,6 +101,6 @@ class ToolReturnAPIView(generics.UpdateAPIView):
         return Response(tool_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ToolChangesHistory(generics.ListAPIView):
+class ToolChangesHistoryAPIView(generics.ListAPIView):
     serializer_class = ToolHistorySerializer
     queryset = Tool.history.filter(history_type="~")

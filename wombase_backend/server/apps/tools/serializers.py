@@ -61,19 +61,19 @@ class ToolHistorySerializer(serializers.ModelSerializer):
             "changed_at",
         )
 
-    def get_changed_at(self, obj):
-        return obj.history_date.strftime("%d.%m.%Y %T")
+    def get_changed_at(self, tool):
+        return tool.history_date.strftime("%d.%m.%Y %T")
 
-    def get_changed_by(self, obj):
-        return obj.history_user_id
+    def get_changed_by(self, tool):
+        return tool.history_user_id
 
-    def get_where_now(self, obj):
-        if obj.owner:
-            return obj.owner.first_name + " " + obj.owner.last_name
-        if obj.currently_at:
-            return obj.currently_at
+    def get_where_now(self, tool):
+        if tool.owner:
+            return tool.owner.first_name + " " + tool.owner.last_name
+        if tool.currently_at:
+            return tool.currently_at
 
-    def get_status(self, obj):
-        if obj.currently_at == Tool.DEFAULT_PLACE:
+    def get_status(self, tool):
+        if tool.currently_at == Tool.DEFAULT_PLACE:
             return "returned"
         return "taken"
