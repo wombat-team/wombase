@@ -41,3 +41,39 @@ class ToolCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ToolCategory
         fields = ("name", "description")
+
+
+class ToolHistorySerializer(serializers.ModelSerializer):
+    changed_at = serializers.SerializerMethodField("get_changed_at")
+    where_now = serializers.SerializerMethodField("get_where_now")
+    status = serializers.SerializerMethodField("get_status")
+    changed_by = serializers.SerializerMethodField("get_changed_by")
+
+    class Meta:
+        model = Tool.history.model
+        fields = (
+            "name",
+            "identifier",
+            "category",
+            "where_now",
+            "status",
+            "changed_by",
+            "changed_at",
+        )
+
+    def get_changed_at(self, tool):
+        return tool.history_date.strftime("%d.%m.%Y %T")
+
+    def get_changed_by(self, tool):
+        return tool.history_user_id
+
+    def get_where_now(self, tool):
+        if tool.owner:
+            return tool.owner.first_name + " " + tool.owner.last_name
+        if tool.currently_at:
+            return tool.currently_at
+
+    def get_status(self, tool):
+        if tool.currently_at == Tool.DEFAULT_PLACE:
+            return "returned"
+        return "taken"

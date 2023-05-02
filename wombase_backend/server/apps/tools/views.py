@@ -1,3 +1,4 @@
+from datetime import datetime
 from rest_framework import generics, status
 from rest_framework.response import Response
 
@@ -6,6 +7,7 @@ from .serializers import (
     ToolListCreateSerializer,
     ToolDetailSerializer,
     ToolCategorySerializer,
+    ToolHistorySerializer,
 )
 
 
@@ -52,7 +54,7 @@ class ToolTransferAPIView(generics.UpdateAPIView):
             return Response(
                 {
                     "message": "The owner and currently_at fields cannot both have a value. "
-                               "Please provide a value for only one of them."
+                    "Please provide a value for only one of them."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -60,7 +62,7 @@ class ToolTransferAPIView(generics.UpdateAPIView):
             return Response(
                 {
                     "message": "Both owner and currently_at fields are empty. "
-                               "Please provide a value for either one of them."
+                    "Please provide a value for either one of them."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -76,7 +78,9 @@ class ToolTransferAPIView(generics.UpdateAPIView):
                 data={"owner": None, "currently_at": data.get("currently_at")},
                 partial=True,
             )
+
         if tool_serializer.is_valid():
+            tool._history_date = datetime.now()
             tool_serializer.save()
             return Response(tool_serializer.data)
         return Response(tool_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -95,3 +99,8 @@ class ToolReturnAPIView(generics.UpdateAPIView):
             tool_serializer.save()
             return Response(tool_serializer.data)
         return Response(tool_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ToolChangesHistoryAPIView(generics.ListAPIView):
+    serializer_class = ToolHistorySerializer
+    queryset = Tool.history.filter(history_type="~")

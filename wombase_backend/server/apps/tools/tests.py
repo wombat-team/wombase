@@ -6,7 +6,11 @@ from server.apps.core.tests import (
     AbstractDetailsMixin,
 )
 from server.apps.tools.models import ToolCategory, Tool
-from server.apps.tools.serializers import ToolCategorySerializer, ToolDetailSerializer, ToolListCreateSerializer
+from server.apps.tools.serializers import (
+    ToolCategorySerializer,
+    ToolDetailSerializer,
+    ToolListCreateSerializer,
+)
 
 
 class ToolCategoryTestMixin(AbstractTestMixin):
@@ -133,7 +137,7 @@ class TestToolRetrieveUpdateDestroyAPIView(
         return {**self.update_data, "owner": self.employee_id}
 
     def get_update_excluded_fields(self):
-        return "currently_at",
+        return ("currently_at",)
 
     def test_request_by_unexisting_id(self):
         self.request_by_unexisting_id()
