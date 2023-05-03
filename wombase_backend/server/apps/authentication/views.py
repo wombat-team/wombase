@@ -18,9 +18,10 @@ class EmployeeLoginAPIView(CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        phone_number = serializer.initial_data.get('phone_number')
-        password = serializer.initial_data.get('password')
+        phone_number = serializer.validated_data.get('phone_number')
+        password = serializer.validated_data.get('password')
 
         user = authenticate(phone_number=phone_number, password=password)
         if user is not None:
