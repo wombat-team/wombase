@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Tool, ToolCategory
+from ..core.models import Employee
 
 
 class ToolListCreateSerializer(serializers.ModelSerializer):
@@ -17,6 +18,21 @@ class ToolListCreateSerializer(serializers.ModelSerializer):
             "description",
             "owner",
             "currently_at",
+        )
+
+
+class ToolPutDetailSerializer(serializers.ModelSerializer):
+    category = serializers.SlugRelatedField(
+        slug_field="name", queryset=ToolCategory.objects.all()
+    )
+
+    class Meta:
+        model = Tool
+        fields = (
+            "name",
+            "identifier",
+            "category",
+            "description",
         )
 
 
@@ -65,11 +81,12 @@ class ToolHistorySerializer(serializers.ModelSerializer):
         return tool.history_date.strftime("%d.%m.%Y %T")
 
     def get_changed_by(self, tool):
-        return tool.history_user_id
+        owner = Employee.objects.filter(id=tool.history_user_id).first()
+        return owner.get_full_name()
 
     def get_where_now(self, tool):
         if tool.owner:
-            return tool.owner.first_name + " " + tool.owner.last_name
+            return f"{tool.owner.first_name} {tool.owner.last_name}"
         if tool.currently_at:
             return tool.currently_at
 

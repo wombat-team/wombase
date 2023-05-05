@@ -22,7 +22,7 @@ class Tool(models.Model):
     owner = models.ForeignKey(Employee, on_delete=models.PROTECT, null=True)
     currently_at = models.CharField(max_length=20, default=DEFAULT_PLACE, null=True)
 
-    history = HistoricalRecords(user_related_name="changed_by")
+    history = HistoricalRecords(user_related_name="changed_by", excluded_fields=("description",))
 
     @property
     def _history_user(self):

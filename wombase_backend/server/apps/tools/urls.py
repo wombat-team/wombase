@@ -5,7 +5,6 @@ from .views import (
     ToolCategoryListCreateAPIView,
     ToolCategoryRetrieveUpdateDestroyAPIView,
     ToolTransferAPIView,
-    ToolReturnAPIView,
     ToolChangesHistoryAPIView,
 )
 
@@ -15,6 +14,5 @@ urlpatterns = [
     path("category/", ToolCategoryListCreateAPIView.as_view()),
     path("category/<pk>", ToolCategoryRetrieveUpdateDestroyAPIView.as_view()),
     path("transfer/<pk>", ToolTransferAPIView.as_view()),
-    path("return/<pk>", ToolReturnAPIView.as_view()),
     path("history/", ToolChangesHistoryAPIView.as_view()),
 ]

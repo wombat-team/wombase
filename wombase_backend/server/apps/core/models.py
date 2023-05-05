@@ -52,5 +52,8 @@ class Employee(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'phone_number'
 
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
     def __str__(self):
-        return f"{self.first_name} {self.last_name}" if not self.is_superuser else f'Admin {self.phone_number}'
+        return self.get_full_name() if not self.is_superuser else f'Admin {self.phone_number}'
