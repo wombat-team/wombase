@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from rest_framework.authtoken.models import Token
 
 from ..employee.models import EmployeeRole
 
@@ -26,6 +27,7 @@ class EmployeeManager(BaseUserManager):
         )
         employee.set_password(password)
         employee.save()
+        Token.objects.create(user=employee)
         return employee
 
     def create_superuser(self, phone_number: str, password: str, **kwargs):

@@ -60,9 +60,6 @@ class ToolTransferAPIView(generics.UpdateAPIView):
     queryset = Tool.objects.all()
     serializer_class = ToolDetailSerializer
 
-    def put(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_400_BAD_REQUEST)
-
     def patch(self, request, *args, **kwargs):
         tool = self.get_object()
         data = request.data
