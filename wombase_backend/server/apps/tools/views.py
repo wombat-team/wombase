@@ -1,4 +1,3 @@
-from datetime import datetime
 from rest_framework import generics, status
 from rest_framework.response import Response
 
@@ -18,14 +17,10 @@ class ToolListCreateAPIView(generics.ListCreateAPIView):
     def get_queryset(self):
         queryset = Tool.objects.all()
         for query_param, param_value in self.request.query_params.items():
-            if query_param == "name":
-                queryset = queryset.filter(name__icontains=param_value)
             if query_param == "category":
                 queryset = queryset.filter(category__name__icontains=param_value)
-            if query_param == "identifier":
-                queryset = queryset.filter(identifier__icontains=param_value)
-            if query_param == "currently_at":
-                queryset = queryset.filter(currently_at__icontains=param_value)
+                continue
+            queryset = queryset.filter(**{f"{query_param}__icontains": param_value})
         return queryset
 
 
@@ -63,9 +58,9 @@ class ToolTransferAPIView(generics.UpdateAPIView):
     def patch(self, request, *args, **kwargs):
         tool = self.get_object()
         data = request.data
-        owner = data.get("owner")
-        currently_at = data.get("currently_at")
-        if owner is not None and currently_at is not None:
+        request_owner = data.get("owner")
+        request_currently_at = data.get("currently_at")
+        if request_owner and request_currently_at:
             return Response(
                 {
                     "detail": "The owner and currently_at fields cannot both have a value. "
@@ -73,7 +68,7 @@ class ToolTransferAPIView(generics.UpdateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if owner is None and currently_at is None:
+        if request_owner is None and request_currently_at is None:
             return Response(
                 {
                     "detail": "Both owner and currently_at fields are empty. "
@@ -82,8 +77,8 @@ class ToolTransferAPIView(generics.UpdateAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if owner is not None:
-            if tool.owner is not None and str(tool.owner.id) == owner:
+        if request_owner:
+            if tool.owner and str(tool.owner.id) == request_owner:
                 return Response(
                     {
                         "detail": "The tool cannot be transferred to the same owner."
@@ -93,12 +88,12 @@ class ToolTransferAPIView(generics.UpdateAPIView):
                 )
             tool_serializer = ToolDetailSerializer(
                 tool,
-                data={"owner": owner, "currently_at": None},
+                data={"owner": request_owner, "currently_at": None},
                 partial=True,
             )
 
-        if currently_at is not None:
-            if tool.currently_at == currently_at:
+        if request_currently_at:
+            if tool.currently_at == request_currently_at:
                 return Response(
                     {
                         "detail": "The tool cannot be transferred to the same location."
@@ -108,7 +103,7 @@ class ToolTransferAPIView(generics.UpdateAPIView):
                 )
             tool_serializer = ToolDetailSerializer(
                 tool,
-                data={"owner": None, "currently_at": currently_at},
+                data={"owner": None, "currently_at": request_currently_at},
                 partial=True,
             )
 
@@ -124,14 +119,5 @@ class ToolChangesHistoryAPIView(generics.ListAPIView):
     def get_queryset(self):
         queryset = Tool.history.filter(history_type="~")
         for query_param, param_value in self.request.query_params.items():
-            if query_param == "name":
-                queryset = queryset.filter(name__icontains=param_value)
-            if query_param == "category":
-                queryset = queryset.filter(category__name__icontains=param_value)
-            if query_param == "identifier":
-                queryset = queryset.filter(identifier__icontains=param_value)
-            if query_param == "owner":
-                queryset = queryset.filter(owner__id__icontains=param_value)
-            if query_param == "currently_at":
-                queryset = queryset.filter(currently_at__icontains=param_value)
+            queryset = queryset.filter(**{f"{query_param}__icontains": param_value})
         return queryset

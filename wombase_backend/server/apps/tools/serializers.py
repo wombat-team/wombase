@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from .models import Tool, ToolCategory
-from ..core.models import Employee
 
 
 class ToolListCreateSerializer(serializers.ModelSerializer):
@@ -63,7 +62,8 @@ class ToolHistorySerializer(serializers.ModelSerializer):
     changed_at = serializers.SerializerMethodField("get_changed_at")
     where_now = serializers.SerializerMethodField("get_where_now")
     status = serializers.SerializerMethodField("get_status")
-    changed_by = serializers.SerializerMethodField("get_changed_by")
+    change_by = serializers.SerializerMethodField("get_change_by")
+    category = serializers.SerializerMethodField("get_category")
 
     class Meta:
         model = Tool.history.model
@@ -73,24 +73,26 @@ class ToolHistorySerializer(serializers.ModelSerializer):
             "category",
             "where_now",
             "status",
-            "changed_by",
+            "change_by",
             "changed_at",
         )
 
     def get_changed_at(self, tool):
         return tool.history_date.strftime("%d.%m.%Y %T")
 
-    def get_changed_by(self, tool):
-        owner = Employee.objects.filter(id=tool.history_user_id).first()
-        return owner.get_full_name()
-
-    def get_where_now(self, tool):
-        if tool.owner:
-            return f"{tool.owner.first_name} {tool.owner.last_name}"
-        if tool.currently_at:
-            return tool.currently_at
+    def get_where_now(self, tool_history):
+        if tool_history.owner_full_name:
+            return tool_history.owner_full_name
+        if tool_history.currently_at:
+            return tool_history.currently_at
 
     def get_status(self, tool):
         if tool.currently_at == Tool.DEFAULT_PLACE:
             return "returned"
         return "taken"
+
+    def get_change_by(self, tool_history):
+        return tool_history.change_by_full_name
+
+    def get_category(self, tool_history):
+        return tool_history.category_name
