@@ -19,8 +19,8 @@ class ToolListCreateAPIView(generics.ListCreateAPIView):
         for query_param, param_value in self.request.query_params.items():
             if query_param == "category":
                 queryset = queryset.filter(category__name__icontains=param_value)
-                continue
-            queryset = queryset.filter(**{f"{query_param}__icontains": param_value})
+            else:
+                queryset = queryset.filter(**{f"{query_param}__icontains": param_value})
         return queryset
 
 
