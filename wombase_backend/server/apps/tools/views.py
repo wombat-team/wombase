@@ -1,4 +1,3 @@
-from datetime import datetime
 from rest_framework import generics, status
 from rest_framework.response import Response
 
@@ -8,6 +7,7 @@ from .serializers import (
     ToolDetailSerializer,
     ToolCategorySerializer,
     ToolHistorySerializer,
+    ToolPutDetailSerializer,
 )
 
 
@@ -17,20 +17,28 @@ class ToolListCreateAPIView(generics.ListCreateAPIView):
     def get_queryset(self):
         queryset = Tool.objects.all()
         for query_param, param_value in self.request.query_params.items():
-            if query_param == "name":
-                queryset = queryset.filter(name__icontains=param_value)
             if query_param == "category":
                 queryset = queryset.filter(category__name__icontains=param_value)
-            if query_param == "identifier":
-                queryset = queryset.filter(identifier__icontains=param_value)
-            if query_param == "currently_at":
-                queryset = queryset.filter(currently_at__icontains=param_value)
+            else:
+                queryset = queryset.filter(**{f"{query_param}__icontains": param_value})
         return queryset
 
 
 class ToolRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Tool.objects.all()
     serializer_class = ToolDetailSerializer
+
+    def put(self, request, *args, **kwargs):
+        tool = self.get_object()
+        tool_serializer = ToolPutDetailSerializer(
+            tool,
+            data=request.data,
+        )
+        if tool_serializer.is_valid():
+            tool.skip_history_when_saving = True
+            tool_serializer.save()
+            return Response(tool_serializer.data)
+        return Response(tool_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ToolCategoryListCreateAPIView(generics.ListCreateAPIView):
@@ -50,51 +58,55 @@ class ToolTransferAPIView(generics.UpdateAPIView):
     def patch(self, request, *args, **kwargs):
         tool = self.get_object()
         data = request.data
-        if data.get("owner") is not None and data.get("currently_at") is not None:
+        request_owner = data.get("owner")
+        request_currently_at = data.get("currently_at")
+        if request_owner and request_currently_at:
             return Response(
                 {
-                    "message": "The owner and currently_at fields cannot both have a value. "
+                    "detail": "The owner and currently_at fields cannot both have a value. "
                     "Please provide a value for only one of them."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if data.get("owner") is None and data.get("currently_at") is None:
+        if request_owner is None and request_currently_at is None:
             return Response(
                 {
-                    "message": "Both owner and currently_at fields are empty. "
+                    "detail": "Both owner and currently_at fields are empty. "
                     "Please provide a value for either one of them."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if data.get("currently_at") is None:
+
+        if request_owner:
+            if tool.owner and str(tool.owner.id) == request_owner:
+                return Response(
+                    {
+                        "detail": "The tool cannot be transferred to the same owner."
+                        "Please provide value of another new owner or mew location."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             tool_serializer = ToolDetailSerializer(
                 tool,
-                data={"owner": data.get("owner"), "currently_at": None},
+                data={"owner": request_owner, "currently_at": None},
                 partial=True,
             )
-        if data.get("owner") is None:
+
+        if request_currently_at:
+            if tool.currently_at == request_currently_at:
+                return Response(
+                    {
+                        "detail": "The tool cannot be transferred to the same location."
+                        "Please provide value of another new owner or mew location."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             tool_serializer = ToolDetailSerializer(
                 tool,
-                data={"owner": None, "currently_at": data.get("currently_at")},
+                data={"owner": None, "currently_at": request_currently_at},
                 partial=True,
             )
 
-        if tool_serializer.is_valid():
-            tool._history_date = datetime.now()
-            tool_serializer.save()
-            return Response(tool_serializer.data)
-        return Response(tool_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class ToolReturnAPIView(generics.UpdateAPIView):
-    queryset = Tool.objects.all()
-    serializer_class = ToolDetailSerializer
-
-    def patch(self, request, *args, **kwargs):
-        tool = self.get_object()
-        tool_serializer = ToolDetailSerializer(
-            tool, data={"owner": None, "currently_at": Tool.DEFAULT_PLACE}, partial=True
-        )
         if tool_serializer.is_valid():
             tool_serializer.save()
             return Response(tool_serializer.data)
@@ -103,4 +115,9 @@ class ToolReturnAPIView(generics.UpdateAPIView):
 
 class ToolChangesHistoryAPIView(generics.ListAPIView):
     serializer_class = ToolHistorySerializer
-    queryset = Tool.history.filter(history_type="~")
+
+    def get_queryset(self):
+        queryset = Tool.history.filter(history_type="~")
+        for query_param, param_value in self.request.query_params.items():
+            queryset = queryset.filter(**{f"{query_param}__icontains": param_value})
+        return queryset
