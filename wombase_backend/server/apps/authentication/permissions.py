@@ -21,11 +21,11 @@ class BaseCustomPermission(BasePermission):
         return is_auth and has_perm
 
 
-class ReadPermission(BaseCustomPermission):
+class ViewEmployeeAndToolsPermission(BaseCustomPermission):
     required_permissions = ['view_employee', 'view_tools']
 
 
-class UpdatePermission(BaseCustomPermission):
+class UpdateEmployeeAndToolsPermission(BaseCustomPermission):
     required_permissions = ['update_employee', 'update_tools']
 
 
@@ -66,11 +66,10 @@ class ToolTransferPermission(BasePermission):
 class PermissionViewMixin:
     def get_permissions(self):
         method = self.request.method
-        print(method)
         if method in SAFE_METHODS:
-            permission_classes = [ReadPermission]
+            permission_classes = [ViewEmployeeAndToolsPermission]
         elif method in UNSAFE_METHODS:
-            permission_classes = [UpdatePermission]
+            permission_classes = [UpdateEmployeeAndToolsPermission]
         else:
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
