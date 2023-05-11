@@ -1,8 +1,13 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from .views import EmployeeRetrieveUpdateDestroyAPIView, EmployeeListCreateAPIView, EmployeeRoleViewSet, \
-    PermissionsListCreateAPIView, PermissionsRetrieveUpdateDestroyAPIView
+from .views import (
+    EmployeeRetrieveUpdateDestroyAPIView,
+    EmployeeListCreateAPIView,
+    EmployeeRoleViewSet,
+    PermissionsListCreateAPIView,
+    PermissionsRetrieveUpdateDestroyAPIView
+)
 
 router = routers.DefaultRouter()
 router.register(r'roles', EmployeeRoleViewSet)
