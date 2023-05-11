@@ -1,4 +1,5 @@
 from rest_framework import generics, status
+from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Tool, ToolCategory
@@ -9,9 +10,18 @@ from .serializers import (
     ToolHistorySerializer,
     ToolPutDetailSerializer,
 )
+from ..authentication.permissions import (
+    PermissionViewMixin,
+    UNSAFE_METHODS,
+    ViewCategoriesPermission,
+    UpdateCategoriesPermission,
+    ToolTransferPermission,
+    ViewToolHistoryPermission,
+    UpdateToolHistoryPermission,
+)
 
 
-class ToolListCreateAPIView(generics.ListCreateAPIView):
+class ToolListCreateAPIView(PermissionViewMixin, generics.ListCreateAPIView):
     serializer_class = ToolListCreateSerializer
 
     def get_queryset(self):
@@ -24,7 +34,7 @@ class ToolListCreateAPIView(generics.ListCreateAPIView):
         return queryset
 
 
-class ToolRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+class ToolRetrieveUpdateDestroyAPIView(PermissionViewMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = Tool.objects.all()
     serializer_class = ToolDetailSerializer
 
@@ -45,15 +55,38 @@ class ToolCategoryListCreateAPIView(generics.ListCreateAPIView):
     queryset = ToolCategory.objects.all()
     serializer_class = ToolCategorySerializer
 
+    def get_permissions(self):
+        method = self.request.method
+        print(method)
+        if method in SAFE_METHODS:
+            permission_classes = [ViewCategoriesPermission]
+        elif method in UNSAFE_METHODS:
+            permission_classes = [UpdateCategoriesPermission]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]
+
 
 class ToolCategoryRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ToolCategory.objects.all()
     serializer_class = ToolCategorySerializer
 
+    def get_permissions(self):
+        method = self.request.method
+        print(method)
+        if method in SAFE_METHODS:
+            permission_classes = [ViewCategoriesPermission]
+        elif method in UNSAFE_METHODS:
+            permission_classes = [UpdateCategoriesPermission]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]
+
 
 class ToolTransferAPIView(generics.UpdateAPIView):
     queryset = Tool.objects.all()
     serializer_class = ToolDetailSerializer
+    permission_classes = (ToolTransferPermission,)
 
     def patch(self, request, *args, **kwargs):
         tool = self.get_object()
@@ -121,3 +154,14 @@ class ToolChangesHistoryAPIView(generics.ListAPIView):
         for query_param, param_value in self.request.query_params.items():
             queryset = queryset.filter(**{f"{query_param}__icontains": param_value})
         return queryset
+
+    def get_permissions(self):
+        method = self.request.method
+        print(method)
+        if method in SAFE_METHODS:
+            permission_classes = [ViewToolHistoryPermission]
+        elif method in UNSAFE_METHODS:
+            permission_classes = [UpdateToolHistoryPermission]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]

@@ -1,0 +1,86 @@
+[
+  {
+    "model": "authentication.Permission",
+    "pk": 1,
+    "fields": {
+      "name": "view_employee"
+    }
+  },
+  {
+    "model": "authentication.Permission",
+    "pk": 2,
+    "fields": {
+      "name": "update_employee"
+    }
+  },
+  {
+    "model": "authentication.Permission",
+    "pk": 3,
+    "fields": {
+      "name": "view_employee_roles"
+    }
+  },
+  {
+    "model": "authentication.Permission",
+    "pk": 4,
+    "fields": {
+      "name": "update_employee_roles"
+    }
+  },
+  {
+    "model": "authentication.Permission",
+    "pk": 5,
+    "fields": {
+      "name": "view_tools"
+    }
+  },
+  {
+    "model": "authentication.Permission",
+    "pk": 6,
+    "fields": {
+      "name": "update_tools"
+    }
+  },
+  {
+    "model": "authentication.Permission",
+    "pk": 7,
+    "fields": {
+      "name": "take_tool"
+    }
+  },
+  {
+    "model": "authentication.Permission",
+    "pk": 8,
+    "fields": {
+      "name": "return_tool"
+    }
+  },
+  {
+    "model": "authentication.Permission",
+    "pk": 9,
+    "fields": {
+      "name": "view_inventory_log"
+    }
+  },
+  {
+    "model": "authentication.Permission",
+    "pk": 10,
+    "fields": {
+      "name": "update_inventory_log"
+    }
+  },
+  {
+    "model": "authentication.Permission",
+    "pk": 11,
+    "fields": {
+      "name": "view_tools_categories"
+    }
+  },
+  {
+    "model": "authentication.Permission",
+    "pk": 12,
+    "fields": {
+      "name": "update_tools_categories"
+    }
+  }
+]
