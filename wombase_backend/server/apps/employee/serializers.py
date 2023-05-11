@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from ..authentication.permissions import Permission
 from ..core.models import Employee
 from .models import EmployeeRole
 
@@ -29,8 +30,13 @@ class EmployeeListCreateSerializer(serializers.ModelSerializer):
         model = Employee
         fields = ('id', 'phone_number', 'first_name', 'last_name', 'password', 'email', 'role')
 
-
 class EmployeeRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmployeeRole
-        fields = ('name',)
+        fields = ('name', 'permissions')
+
+
+class PermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Permission
+        fields = ('id', 'name')
