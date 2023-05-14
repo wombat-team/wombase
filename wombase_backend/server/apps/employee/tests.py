@@ -1,10 +1,10 @@
 from .models import EmployeeRole
 from ..core.models import Employee
-from .serializers import EmployeeDetailsSerializer, EmployeeListCreateSerializer
+from .serializers import EmployeeDetailsSerializer, EmployeeListSerializer
 from ..core.tests import (
     AbstractTestMixin,
-    AbstractListCreateViewTest,
     AbstractRetrieveUpdateDestroyViewTest,
+    AbstractListViewTestMixin, authenticated,
 )
 
 
@@ -90,11 +90,11 @@ class EmployeeCreationTest(AbstractTestMixin):
         )
 
 
+@authenticated
 class EmployeeTestMixin(AbstractTestMixin):
     url = "/employee/"
 
     def setUp(self):
-        Employee.objects.all().delete()
         EmployeeRole.objects.get_or_create(name="Worker")
         EmployeeRole.objects.get_or_create(name="Manager")
         for index in range(1, 3):
@@ -107,23 +107,15 @@ class EmployeeTestMixin(AbstractTestMixin):
                 email=f"test{index}@example.com",
             )
 
+    def tearDown(self):
+        Employee.objects.all().delete()
 
-class TestEmployeeListCreateView(EmployeeTestMixin, AbstractListCreateViewTest):
-    serializer = EmployeeListCreateSerializer
-    create_data = {
-        "phone_number": "+380970987654",
-        "first_name": "Helen",
-        "last_name": "Crain",
-        "email": "helen.crain@example.com",
-        "role": "Manager",
-        "password": "somePassword123#(#(",
-    }
+
+class TestEmployeeListView(EmployeeTestMixin, AbstractListViewTestMixin):
+    serializer = EmployeeListSerializer
 
     def test_list(self):
         return self.basic_list_functionality_test()
-
-    def test_create(self):
-        return self.basic_create_functionality_test()
 
 
 class TestEmployeeRetrieveUpdateDestroyAPIView(
@@ -158,12 +150,14 @@ class TestEmployeeRetrieveUpdateDestroyAPIView(
         self.assertEquals(
             pre_change_email,
             after_change_email,
-            "Email must not be changed if not included in request"
+            "Email must not be changed if not included in request",
         )
 
     def test_update_password_is_hashed(self):
         self.client.put(self.get_url(), data=self.update_data)
         employee_in_db = self.model.objects.get(id=self.available_object_pk)
         self.assertNotEquals(
-            self.update_data.get("password"), employee_in_db.password, "Password must be hashed."
+            self.update_data.get("password"),
+            employee_in_db.password,
+            "Password must be hashed.",
         )

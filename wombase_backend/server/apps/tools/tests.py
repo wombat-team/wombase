@@ -4,12 +4,14 @@ from server.apps.core.tests import (
     AbstractListCreateViewTest,
     AbstractRetrieveUpdateDestroyViewTest,
     AbstractDetailsMixin,
+    authenticated,
 )
 from server.apps.tools.models import ToolCategory, Tool
 from server.apps.tools.serializers import (
     ToolCategorySerializer,
     ToolDetailSerializer,
     ToolListCreateSerializer,
+    ToolHistorySerializer,
 )
 
 
@@ -17,13 +19,16 @@ class ToolCategoryTestMixin(AbstractTestMixin):
     url = "/tools/category/"
 
     def setUp(self):
-        ToolCategory.objects.all().delete()
         for category_name in ("Drill", "Screwdriver"):
             ToolCategory.objects.create(
                 name=category_name, description=category_name * 2
             )
 
+    def tearDown(self):
+        ToolCategory.objects.all().delete()
 
+
+@authenticated
 class TestToolCategoryListCreateAPIView(
     ToolCategoryTestMixin, AbstractListCreateViewTest
 ):
@@ -37,6 +42,7 @@ class TestToolCategoryListCreateAPIView(
         self.basic_create_functionality_test()
 
 
+@authenticated
 class TestToolCategoryRetrieveUpdateDestroyAPIView(
     ToolCategoryTestMixin, AbstractRetrieveUpdateDestroyViewTest
 ):
@@ -61,12 +67,10 @@ class ToolTestMixin(AbstractTestMixin):
     employee_id = 0
 
     def setUp(self):
-        Tool.objects.all().delete()
-        ToolCategory.objects.create(name="Drill", description="Drills")
-        screwdriver = ToolCategory.objects.create(
+        ToolCategory.objects.get_or_create(name="Drill", description="Drills")
+        screwdriver = ToolCategory.objects.get_or_create(
             name="Screwdriver", description="Screwdrives"
-        )
-        Employee.objects.all().delete()
+        )[0]
         self.employee_id = Employee.objects.create(
             phone_number="+380630987654", password="test"
         ).id
@@ -80,7 +84,12 @@ class ToolTestMixin(AbstractTestMixin):
                 currently_at=None,
             )
 
+    def tearDown(self):
+        for cls in (Tool, Employee, ToolCategory):
+            cls.objects.all().delete()
 
+
+@authenticated
 class TestToolListCreateAPIView(ToolTestMixin, AbstractListCreateViewTest):
     serializer = ToolListCreateSerializer
     create_data = {
@@ -122,6 +131,7 @@ class TestToolListCreateAPIView(ToolTestMixin, AbstractListCreateViewTest):
         self.basic_create_functionality_test()
 
 
+@authenticated
 class TestToolRetrieveUpdateDestroyAPIView(
     ToolTestMixin, AbstractRetrieveUpdateDestroyViewTest
 ):
@@ -133,11 +143,8 @@ class TestToolRetrieveUpdateDestroyAPIView(
         "description": "It works. Surely",
     }
 
-    def get_update_data(self):
-        return {**self.update_data, "owner": self.employee_id}
-
     def get_update_excluded_fields(self):
-        return ("currently_at",)
+        return ("currently_at", "owner")
 
     def test_request_by_unexisting_id(self):
         self.request_by_unexisting_id()
@@ -152,14 +159,15 @@ class TestToolRetrieveUpdateDestroyAPIView(
         self.basic_delete_functionality_test()
 
 
-class TestToolTransferReturnMixin(ToolTestMixin, AbstractDetailsMixin):
+@authenticated
+class TestToolTransferAPIView(ToolTestMixin, AbstractDetailsMixin):
+    url = "/tools/transfer/"
     serializer = ToolDetailSerializer
 
     def setUp(self):
-        screwdriver = ToolCategory.objects.create(
+        screwdriver = ToolCategory.objects.get_or_create(
             name="Screwdriver", description="Screwdrives"
-        )
-        Employee.objects.all().delete()
+        )[0]
         self.giver_employee_id = Employee.objects.create(
             phone_number="+380630987654", password="test"
         ).id
@@ -188,16 +196,6 @@ class TestToolTransferReturnMixin(ToolTestMixin, AbstractDetailsMixin):
         )
         return self.get_available_object()
 
-    def test_patched_tool_not_found(self):
-        reponse = self.client.patch(self.get_url() + "1")
-        self.request_code_matches_expected_test(
-            response=reponse, expected_status_code=404
-        )
-
-
-class TestToolTransferAPIView(TestToolTransferReturnMixin):
-    url = "/tools/transfer/"
-
     def transfer_successful_test(
         self,
         changed_field: str,
@@ -218,6 +216,27 @@ class TestToolTransferAPIView(TestToolTransferReturnMixin):
         self.assertIsNone(
             none_field_actual_value := getattr(tool_after_patch, none_field_name),
             f"{none_field_name.capitalize()} field must be None after transfer, but is {none_field_actual_value}",
+        )
+
+    def transfer_to_same_destination_test(self, is_person: bool = None):
+        tool = self.get_available_object()
+        pk = tool.pk
+        if not is_person:
+            setattr(tool, "currently_at", Tool.DEFAULT_PLACE)
+            setattr(tool, "owner", None)
+            tool.save()
+        response = self.client.patch(
+            f"{self.url}{pk}",
+            data={
+                "owner"
+                if is_person
+                else "currently_at": tool.owner.id
+                if is_person
+                else tool.currently_at
+            },
+        )
+        self.request_code_matches_expected_test(
+            response=response, expected_status_code=400
         )
 
     def test_transfer_tool_to_employee(self):
@@ -250,18 +269,52 @@ class TestToolTransferAPIView(TestToolTransferReturnMixin):
             response=response, expected_status_code=400
         )
 
-
-class TestToolReturnAPIView(TestToolTransferReturnMixin):
-    url = "/tools/return/"
-
-    def test_tool_return(self):
-        tool_after_patch = self.begin_patch(patch_data={})
-        self.assertEquals(
-            "warehouse",
-            tool_after_patch.currently_at,
-            "Tool must be returned to warehouse",
+    def test_patched_tool_not_found(self):
+        response = self.client.patch(self.get_url() + "1")
+        self.request_code_matches_expected_test(
+            response=response, expected_status_code=404
         )
-        self.assertIsNone(
-            tool_after_patch.owner,
-            f"After returning tool to warehouse owner must be None",
+
+    def test_transfer_tool_to_same_owner(self):
+        self.transfer_to_same_destination_test(is_person=True)
+
+    def test_transfer_tool_to_same_place(self):
+        self.transfer_to_same_destination_test(is_person=False)
+
+
+@authenticated
+class TestToolChangesHistoryAPIView(ToolTestMixin, AbstractDetailsMixin):
+    url = "/tools/history/"
+    serializer = ToolHistorySerializer
+
+    @property
+    def available_object_pk(self) -> int:
+        return Tool.objects.last().pk
+
+    @property
+    def transfer_url(self):
+        return f"/tools/transfer/{self.available_object_pk}"
+
+    @property
+    def put_url(self):
+        return f"/tools/{self.available_object_pk}"
+
+    def test_history_record_is_created(self):
+        self.client.patch(self.transfer_url, data={"currently_at": "service"})
+        response = self.client.get(self.url)
+        self.request_code_matches_expected_test(response, 200)
+        response_data = response.data
+        self.assertEquals(1, len(response_data), "Hisorical record is not created")
+
+    def test_put_doesnt_create_records(self):
+        self.client.put(
+            self.put_url, data=TestToolRetrieveUpdateDestroyAPIView.update_data
+        )
+        response = self.client.get(self.url)
+        self.request_code_matches_expected_test(response, 200)
+        response_data = response.data
+        self.assertEquals(
+            0,
+            len(response_data),
+            "Hisorical record is created while doing put, but must not be created",
         )
