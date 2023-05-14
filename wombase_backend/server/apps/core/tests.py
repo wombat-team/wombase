@@ -1,6 +1,15 @@
+import os
+
+from django.core.management import call_command
 from django.db.models import Model
 from django.test import TestCase
+from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
+
+from server.apps.authentication.permissions import Permission
+from server.apps.core.models import Employee
+from server.apps.employee.models import EmployeeRole
+from server.wombase_backend.settings import BASE_DIR
 
 
 class AbstractTestMixin(TestCase):
@@ -17,11 +26,11 @@ class AbstractTestMixin(TestCase):
         return self.model._meta.primary_key
 
     def to_narrowed_dict(
-        self,
-        instance: Model | dict,
-        fields: tuple = (),
-        excluded_fields: tuple = (),
-        include_blank: bool = True,
+            self,
+            instance: Model | dict,
+            fields: tuple = (),
+            excluded_fields: tuple = (),
+            include_blank: bool = True,
     ):
         if not fields:
             fields = self.serializer.Meta.fields
@@ -58,6 +67,16 @@ class AbstractTestMixin(TestCase):
             f"Status code must be {expected_status_code}, but got {status_code}",
         )
 
+    def request_is_not_authenticated_test(self):
+        self.client.credentials()
+        url = getattr(self.__class__, "get_url", None)
+        if not url:
+            url = self.url
+        else:
+            url = url(self)
+        response = self.client.get(url)
+        self.request_code_matches_expected_test(response, 401)
+
 
 class AbstractListViewTestMixin(AbstractTestMixin):
     def basic_list_functionality_test(self):
@@ -77,11 +96,11 @@ class AbstractListViewTestMixin(AbstractTestMixin):
         )
 
     def query_param_test_set(
-        self,
-        query_param: str,
-        exptected_queryset_length: int,
-        failure_message: str = "",
-        param_value: str = None,
+            self,
+            query_param: str,
+            exptected_queryset_length: int,
+            failure_message: str = "",
+            param_value: str = None,
     ):
         response_data = self.client.get(
             f"{self.url}?{query_param}" + (f"={param_value}" if param_value else "")
@@ -92,7 +111,7 @@ class AbstractListViewTestMixin(AbstractTestMixin):
             failure_message
             if failure_message
             else f"{query_param.capitalize()} filtering test failure"
-            + f". Expected queryset length {exptected_queryset_length}, got {element_quantity}",
+                 + f". Expected queryset length {exptected_queryset_length}, got {element_quantity}",
         )
         if not param_value:
             return
@@ -166,9 +185,7 @@ class AbstractRetrieveViewMixin(AbstractDetailsMixin):
         self.request_code_matches_expected_test(
             response=response, expected_status_code=200
         )
-        expected_object = self.to_narrowed_dict(
-            self.get_available_object()
-        )
+        expected_object = self.to_narrowed_dict(self.get_available_object())
         actual_object = self.to_narrowed_dict(response.data)
         self.assertEqual(
             expected_object,
@@ -209,7 +226,7 @@ class AbstractUpdateViewMixin(AbstractDetailsMixin):
         )
         self.assertEquals(
             self.to_narrowed_dict(response.data),
-            actual := self.to_narrowed_dict(object_in_db),
+            actual := self.to_narrowed_dict(object_in_db, excluded_fields=self.get_update_excluded_fields()),
             f"Response data must match the data in db. Expected {expected}, got {actual}",
         )
 
@@ -235,3 +252,40 @@ class AbstractRetrieveUpdateDestroyViewTest(
     AbstractDestroyViewMixin,
 ):
     ...
+
+
+def authenticated(cls):
+    def authenticate_setup(function):
+        def wrapper(self):
+            from ..authentication.tests import InheritsEmployeeCreateData
+
+            manager, created = EmployeeRole.objects.get_or_create(name="Manager")
+            if created:
+                with open(os.devnull, 'w') as null_device:
+                    call_command(
+                        "loaddata",
+                        f"{BASE_DIR}/apps/authentication/fixtures/permissions.json",
+                        stdout=null_device,
+                        stderr=null_device,
+                    )
+                for permission_id in range(1, 13):
+                    manager.permissions.add(Permission.objects.get(id=permission_id))
+
+            employe_data = InheritsEmployeeCreateData.get_sample_data()
+            employee = Employee.objects.create_user(
+                role_name=employe_data.pop("role"), **employe_data
+            )
+
+            token = Token.objects.get(user=employee)
+            self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
+
+            function(self)
+
+        return wrapper
+
+    def test_unauthenticated_request_fails(self):
+        self.request_is_not_authenticated_test()
+
+    cls.setUp = authenticate_setup(cls.setUp)
+    cls.test_unauthenticated_request_fails = test_unauthenticated_request_fails
+    return cls
