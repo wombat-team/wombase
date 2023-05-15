@@ -6,6 +6,13 @@ from simple_history.signals import pre_create_historical_record
 from ..core.models import Employee
 
 
+class ToolHistoricalRecords(HistoricalRecords):
+    def post_save(self, instance, created, using=None, **kwargs):
+        if created:
+            return
+        super().post_save(instance, created, using=None, **kwargs)
+
+
 class ToolCategory(models.Model):
     name = models.CharField(max_length=20, unique=True)
     description = models.TextField(null=True)
@@ -33,8 +40,7 @@ class Tool(models.Model):
     owner = models.ForeignKey(Employee, on_delete=models.PROTECT, null=True)
     currently_at = models.CharField(max_length=20, default=DEFAULT_PLACE, null=True)
 
-    history = HistoricalRecords(
-        user_related_name="changed_by",
+    history = ToolHistoricalRecords(
         excluded_fields=(
             "description",
             "owner",
@@ -42,14 +48,6 @@ class Tool(models.Model):
         ),
         bases=(FullName,),
     )
-
-    @property
-    def _history_user(self):
-        return self.changed_by
-
-    @_history_user.setter
-    def _history_user(self, value):
-        self.changed_by = value
 
     def __str__(self):
         return self.name
@@ -62,7 +60,8 @@ class Tool(models.Model):
             history_instance.owner_full_name = source_instance.owner.get_full_name()
         else:
             history_instance.owner_full_name = None
-        history_instance.change_by_full_name = Employee.objects.get(
-            id=history_instance.history_user_id
-        ).get_full_name()
+        if history_instance.history_user_id is not None:
+            history_instance.change_by_full_name = Employee.objects.get(
+                id=history_instance.history_user_id
+            ).get_full_name()
         history_instance.category_name = source_instance.category.name
