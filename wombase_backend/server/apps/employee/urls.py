@@ -5,8 +5,6 @@ from .views import (
     EmployeeRetrieveUpdateDestroyAPIView,
     EmployeeListCreateAPIView,
     EmployeeRoleViewSet,
-    PermissionsListCreateAPIView,
-    PermissionsRetrieveUpdateDestroyAPIView
 )
 
 router = routers.DefaultRouter()
@@ -16,6 +14,4 @@ urlpatterns = [
     path('<int:pk>', EmployeeRetrieveUpdateDestroyAPIView.as_view()),
     path('', EmployeeListCreateAPIView.as_view()),
     path('', include(router.urls)),
-    path('permissions/', PermissionsListCreateAPIView.as_view()),
-    path('permissions/<int:pk>', PermissionsRetrieveUpdateDestroyAPIView.as_view()),
 ]

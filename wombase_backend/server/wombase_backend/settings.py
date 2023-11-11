@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 
-DEBUG = True if os.getenv('DEBUG') == 'True' else False
+DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'server.apps.employee',
     'server.apps.core',
     'server.apps.authentication',
+    'drf_yasg',
     'rest_framework.authtoken',
 ]
 
@@ -65,7 +66,7 @@ DATABASES = {
         'NAME': os.getenv('DB_NAME'),
         'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': 'db',
+        'HOST': os.getenv('DB_HOST'),
         'PORT': 5432,
     }
 }
