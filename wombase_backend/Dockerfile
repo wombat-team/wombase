@@ -1,14 +1,8 @@
-FROM python:3.10
+FROM python:3.11
 
 COPY ./server /opt/server
-COPY manage.py docker-entrypoint.sh /opt/
-COPY requirements.txt /opt/
-
-ENV SECRET_KEY='${SECRET_KEY}'
-ENV DB_NAME='${DB_NAME}'
-ENV DB_USER='${DB_USER}'
-ENV DB_PASSWORD='${DB_PASSWORD}'
-ENV DB_HOST='${DB_HOST}'
+COPY ./manage.py ./docker-entrypoint.sh /opt/
+COPY ./requirements.txt /opt/
 
 WORKDIR /opt/
 
